@@ -1,0 +1,1276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1419">
+<title>Time Manager</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #eceef1;
+  --line: #dcdfe4;
+  --text: #16191d;
+  --text-dim: #6b7280;
+  --work: #22c55e;
+  --pause: #f59e0b;
+  --track: #e2e5e9;
+  --danger: #dc2626;
+  --accent: #16a34a;
+  --shadow: 0 1px 3px rgba(0,0,0,.09), 0 6px 20px rgba(0,0,0,.05);
+}
+:root[data-theme="dark"], :root:not([data-theme="light"]) {
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) { color-scheme: light; }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1419;
+  --surface: #171d24;
+  --surface-2: #1f262f;
+  --line: #2b333d;
+  --text: #e8ecf1;
+  --text-dim: #8b95a3;
+  --work: #34d47f;
+  --pause: #fbbf24;
+  --track: #232b34;
+  --danger: #f87171;
+  --accent: #34d47f;
+  --shadow: 0 1px 3px rgba(0,0,0,.4), 0 8px 28px rgba(0,0,0,.35);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1419;
+    --surface: #171d24;
+    --surface-2: #1f262f;
+    --line: #2b333d;
+    --text: #e8ecf1;
+    --text-dim: #8b95a3;
+    --work: #34d47f;
+    --pause: #fbbf24;
+    --track: #232b34;
+    --danger: #f87171;
+    --accent: #34d47f;
+    --shadow: 0 1px 3px rgba(0,0,0,.4), 0 8px 28px rgba(0,0,0,.35);
+  }
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  overscroll-behavior-y: none;
+}
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; border: none; background: none; }
+
+/* ---------- chrome ---------- */
+.topbar {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; gap: 12px;
+  padding: max(8px, env(safe-area-inset-top)) 14px 8px;
+  background: var(--bg);
+  border-bottom: 1px solid transparent;
+}
+.topbar.scrolled { border-bottom-color: var(--line); }
+.topbar h1 { font-size: 17px; font-weight: 600; margin: 0; letter-spacing: -.01em; }
+.iconbtn {
+  width: 42px; height: 42px; flex: 0 0 42px;
+  display: grid; place-items: center; border-radius: 12px;
+  color: var(--text);
+}
+.iconbtn:active { background: var(--surface-2); }
+.iconbtn svg { width: 22px; height: 22px; }
+.spacer { flex: 1; }
+
+/* ---------- timer screen ---------- */
+#screen-timer {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 6vh 20px calc(28px + env(safe-area-inset-bottom));
+  min-height: calc(100dvh - 58px);
+}
+.elapsed {
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(44px, 15vw, 68px);
+  font-weight: 250; letter-spacing: -.03em; line-height: 1;
+  margin: 8px 0 4px;
+}
+.elapsed.idle { color: var(--text-dim); font-size: clamp(30px, 9vw, 40px); font-weight: 300; }
+.elapsed-label { color: var(--text-dim); font-size: 13.5px; min-height: 20px; }
+
+.bigbtn {
+  width: min(62vw, 232px); aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--accent); color: #06130b;
+  font-size: 27px; font-weight: 650; letter-spacing: .1em;
+  margin: 7vh 0 6vh;
+  box-shadow: 0 10px 34px -10px var(--accent);
+  transition: transform .12s ease, filter .12s ease;
+}
+.bigbtn:active { transform: scale(.96); filter: brightness(.92); }
+.running-actions { display: flex; gap: 14px; margin: 7vh 0 6vh; width: 100%; max-width: 340px; }
+.running-actions button {
+  flex: 1; height: 84px; border-radius: 22px; font-size: 18px; font-weight: 600;
+}
+#btn-pause { background: var(--surface); border: 1.5px solid var(--line); color: var(--text); }
+#btn-stop  { background: var(--danger); color: #fff; }
+.running-actions button:active { transform: scale(.97); }
+
+.totals { display: flex; gap: 12px; width: 100%; max-width: 340px; margin-top: auto; }
+.total-card {
+  flex: 1; background: var(--surface); border: 1px solid var(--line);
+  border-radius: 16px; padding: 13px 15px;
+}
+.total-card .k { color: var(--text-dim); font-size: 12.5px; letter-spacing: .03em; text-transform: uppercase; }
+.total-card .v { font-size: 21px; font-weight: 600; font-variant-numeric: tabular-nums; margin-top: 3px; }
+
+/* ---------- list screens ---------- */
+.screen { padding: 0 14px calc(30px + env(safe-area-inset-bottom)); }
+.periodnav {
+  display: flex; align-items: center; gap: 8px; margin: 4px 0 14px;
+}
+.periodnav .label { flex: 1; text-align: center; font-weight: 600; font-size: 15px; }
+.periodnav button {
+  width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center;
+  background: var(--surface); border: 1px solid var(--line);
+}
+.periodnav button:disabled { opacity: .35; }
+
+.axis {
+  display: grid; grid-template-columns: 38px 1fr 66px;
+  gap: 10px; align-items: center;
+  color: var(--text-dim); font-size: 10.5px; padding-bottom: 5px;
+}
+.axis .ticks { display: flex; justify-content: space-between; }
+
+.dayrow {
+  display: grid; grid-template-columns: 38px 1fr 66px;
+  gap: 10px; align-items: center;
+  padding: 5px 0; width: 100%; text-align: left;
+}
+.dayrow:active { background: var(--surface-2); border-radius: 10px; }
+.dayrow.weekend .d-name, .dayrow.weekend .d-hours { opacity: .5; }
+.dayrow.today .d-name { color: var(--accent); font-weight: 700; }
+.d-name { font-size: 12px; color: var(--text-dim); line-height: 1.15; }
+.d-name b { display: block; color: var(--text); font-size: 13px; font-weight: 600; }
+.d-hours { font-size: 13px; text-align: right; font-variant-numeric: tabular-nums; }
+.d-hours.zero { color: var(--text-dim); }
+
+.track {
+  position: relative; height: 26px; border-radius: 7px;
+  background: var(--track); overflow: hidden;
+}
+.track .grid { position: absolute; inset: 0; }
+.track .grid i { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--bg); opacity: .55; }
+.seg { position: absolute; top: 0; bottom: 0; }
+.seg.work { background: var(--work); }
+.seg.pause { background: var(--pause); }
+.seg.live { background-image: linear-gradient(115deg, rgba(255,255,255,.28) 25%, transparent 25% 50%, rgba(255,255,255,.28) 50% 75%, transparent 75%); background-size: 14px 14px; }
+
+.summary {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin: 16px 0 6px; padding: 14px 16px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+}
+.summary .k { color: var(--text-dim); font-size: 13px; }
+.summary .v { font-size: 22px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.legend { display: flex; gap: 16px; justify-content: center; color: var(--text-dim); font-size: 12px; margin-top: 14px; }
+.legend span { display: flex; align-items: center; gap: 6px; }
+.legend i { width: 11px; height: 11px; border-radius: 3px; display: block; }
+
+/* ---------- drawer ---------- */
+.scrim {
+  position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 40;
+  opacity: 0; pointer-events: none; transition: opacity .2s ease;
+}
+.scrim.open { opacity: 1; pointer-events: auto; }
+#drawer {
+  position: fixed; top: 0; left: 0; bottom: 0; width: min(76vw, 290px); z-index: 50;
+  background: var(--surface); border-right: 1px solid var(--line);
+  transform: translateX(-102%); transition: transform .22s cubic-bezier(.3,.7,.3,1);
+  padding: max(18px, env(safe-area-inset-top)) 0 20px;
+  display: flex; flex-direction: column;
+}
+#drawer.open { transform: none; }
+#drawer h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .07em; color: var(--text-dim); margin: 6px 20px 10px; font-weight: 600; }
+.navitem {
+  display: flex; align-items: center; gap: 14px; width: 100%;
+  padding: 14px 20px; font-size: 16px; text-align: left;
+}
+.navitem svg { width: 20px; height: 20px; color: var(--text-dim); flex: none; }
+.navitem.active { color: var(--accent); font-weight: 600; }
+.navitem.active svg { color: var(--accent); }
+.navitem:active { background: var(--surface-2); }
+.drawer-foot { margin-top: auto; padding: 14px 20px 0; color: var(--text-dim); font-size: 12px; border-top: 1px solid var(--line); }
+
+/* ---------- sheet / modal ---------- */
+#sheet-scrim { z-index: 60; }
+#sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 70;
+  background: var(--surface); border-radius: 20px 20px 0 0;
+  border-top: 1px solid var(--line);
+  transform: translateY(102%); transition: transform .24s cubic-bezier(.3,.7,.3,1);
+  max-height: 88dvh; display: flex; flex-direction: column;
+  box-shadow: var(--shadow);
+}
+#sheet.open { transform: none; }
+.sheet-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 16px 16px 10px; border-bottom: 1px solid var(--line);
+}
+.sheet-head h3 { margin: 0; font-size: 17px; font-weight: 650; flex: 1; }
+.sheet-body { overflow-y: auto; padding: 12px 16px calc(20px + env(safe-area-inset-bottom)); -webkit-overflow-scrolling: touch; }
+
+.field { margin: 14px 0; }
+.field label { display: block; font-size: 13px; color: var(--text-dim); margin-bottom: 6px; }
+.field input, .field select {
+  width: 100%; padding: 12px 13px; border-radius: 12px;
+  background: var(--surface-2); border: 1px solid var(--line);
+}
+.hint { color: var(--text-dim); font-size: 12.5px; margin-top: 6px; }
+
+.btn {
+  display: block; width: 100%; padding: 14px; border-radius: 14px;
+  font-size: 16px; font-weight: 600; text-align: center;
+  background: var(--surface-2); border: 1px solid var(--line);
+}
+.btn.primary { background: var(--accent); color: #06130b; border-color: transparent; }
+.btn.danger { color: var(--danger); }
+.btn + .btn { margin-top: 10px; }
+.btn:active { filter: brightness(.93); }
+.btnrow { display: flex; gap: 10px; }
+.btnrow .btn { margin-top: 0; }
+
+.entry {
+  display: flex; align-items: center; gap: 12px;
+  padding: 13px 0; border-bottom: 1px solid var(--line); width: 100%; text-align: left;
+}
+.entry:last-child { border-bottom: none; }
+.entry .times { flex: 1; font-variant-numeric: tabular-nums; }
+.entry .times small { display: block; color: var(--text-dim); font-size: 12px; font-variant-numeric: normal; }
+.entry .dur { font-weight: 600; font-variant-numeric: tabular-nums; }
+.entry .chev { color: var(--text-dim); }
+.empty { color: var(--text-dim); text-align: center; padding: 30px 10px; font-size: 14.5px; }
+.pill {
+  display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 999px;
+  background: var(--surface-2); color: var(--text-dim); border: 1px solid var(--line);
+  vertical-align: middle; margin-left: 6px;
+}
+.pill.warn { color: var(--pause); border-color: var(--pause); }
+
+.pauselist { margin-top: 6px; }
+.pauserow { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px dashed var(--line); }
+.pauserow .times { flex: 1; font-size: 14px; font-variant-numeric: tabular-nums; }
+.pauserow button { color: var(--danger); font-size: 13px; padding: 6px 8px; }
+
+/* ---------- toast + alert ---------- */
+#toast {
+  position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom));
+  transform: translate(-50%, 20px); z-index: 90;
+  background: var(--text); color: var(--bg);
+  padding: 11px 18px; border-radius: 999px; font-size: 14px; font-weight: 500;
+  opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s;
+  max-width: 88vw; text-align: center;
+}
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+#alert-scrim { z-index: 80; }
+#alertbox {
+  position: fixed; z-index: 85; left: 50%; top: 50%; transform: translate(-50%,-50%) scale(.96);
+  width: min(92vw, 380px); background: var(--surface); border: 1px solid var(--line);
+  border-radius: 20px; padding: 22px; box-shadow: var(--shadow);
+  opacity: 0; pointer-events: none; transition: opacity .18s, transform .18s;
+}
+#alertbox.open { opacity: 1; pointer-events: auto; transform: translate(-50%,-50%) scale(1); }
+#alertbox h3 { margin: 0 0 8px; font-size: 18px; }
+#alertbox p { margin: 0 0 18px; color: var(--text-dim); font-size: 14.5px; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<div class="topbar" id="topbar">
+  <button class="iconbtn" id="btn-menu" aria-label="Menu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+  </button>
+  <h1 id="title">Time Manager</h1>
+  <div class="spacer"></div>
+</div>
+
+<!-- TIMER -->
+<main id="screen-timer">
+  <div class="elapsed idle" id="elapsed">Not running</div>
+  <div class="elapsed-label" id="elapsed-label"></div>
+
+  <button class="bigbtn" id="btn-start">START</button>
+
+  <div class="running-actions" id="running-actions" hidden>
+    <button id="btn-pause">Pause</button>
+    <button id="btn-stop">Stop</button>
+  </div>
+
+  <div class="totals">
+    <div class="total-card"><div class="k">Today</div><div class="v" id="today-total">0h 0m</div></div>
+    <div class="total-card"><div class="k">This week</div><div class="v" id="week-total">0.0h</div></div>
+  </div>
+</main>
+
+<!-- WEEK / MONTH -->
+<main id="screen-period" class="screen" hidden>
+  <div class="periodnav">
+    <button id="per-prev" aria-label="Previous"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <div class="label" id="per-label"></div>
+    <button id="per-next" aria-label="Next"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+  </div>
+  <div class="axis">
+    <div></div>
+    <div class="ticks"><span>0</span><span>6</span><span>12</span><span>18</span><span>24</span></div>
+    <div></div>
+  </div>
+  <div id="per-rows"></div>
+  <div class="summary"><div class="k" id="per-sum-k">Week total</div><div class="v" id="per-sum-v">0.0h</div></div>
+  <div class="legend">
+    <span><i style="background:var(--work)"></i>Worked</span>
+    <span><i style="background:var(--pause)"></i>Paused</span>
+    <span><i style="background:var(--track)"></i>Rest</span>
+  </div>
+</main>
+
+<!-- DRAWER -->
+<div class="scrim" id="drawer-scrim"></div>
+<nav id="drawer">
+  <h2>Time Manager</h2>
+  <button class="navitem" data-nav="timer">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg> Timer
+  </button>
+  <button class="navitem" data-nav="week">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/></svg> Week
+  </button>
+  <button class="navitem" data-nav="month">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M7 14h3M14 14h3M7 17.5h3M14 17.5h3"/></svg> Month
+  </button>
+  <button class="navitem" data-nav="data">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Backup
+  </button>
+  <button class="navitem" data-nav="settings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7.5 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0-1.1-2.7H1.6a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 7.5a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3h.1A1.6 1.6 0 0 0 10 1.6V1.6a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5h.1a1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8v.1a1.6 1.6 0 0 0 1.5 1H23a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg> Settings
+  </button>
+  <div class="drawer-foot">Data is stored on this device only.<br>Export regularly.</div>
+</nav>
+
+<!-- SHEET -->
+<div class="scrim" id="sheet-scrim"></div>
+<section id="sheet">
+  <div class="sheet-head">
+    <h3 id="sheet-title"></h3>
+    <button class="iconbtn" id="sheet-close" aria-label="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <div class="sheet-body" id="sheet-body"></div>
+</section>
+
+<!-- ALERT -->
+<div class="scrim" id="alert-scrim"></div>
+<div id="alertbox">
+  <h3 id="alert-title"></h3>
+  <p id="alert-msg"></p>
+  <div id="alert-actions"></div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   Constants & tiny helpers
+   ============================================================ */
+const STORE_KEY = "time-manager-v1";
+const MIN = 60000, HOUR = 3600000, DAY = 86400000;
+const DAY_NAMES = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+
+const $ = (id) => document.getElementById(id);
+const el = (tag, cls, txt) => {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (txt != null) n.textContent = txt;
+  return n;
+};
+const uuid = () => (crypto.randomUUID ? crypto.randomUUID()
+  : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
+      const r = Math.random() * 16 | 0;
+      return (c === "x" ? r : (r & 3 | 8)).toString(16);
+    }));
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+/* ============================================================
+   State
+   ============================================================ */
+const DEFAULT_SETTINGS = { cutoff: "22:00", maxSessionHours: 16, theme: "auto" };
+
+let state = { version: 1, settings: { ...DEFAULT_SETTINGS }, sessions: [] };
+let storageBroken = false;
+
+function load() {
+  let raw = null;
+  try { raw = localStorage.getItem(STORE_KEY); }
+  catch (e) { storageBroken = true; return; }
+  if (!raw) return;
+  try {
+    const parsed = JSON.parse(raw);
+    state.settings = { ...DEFAULT_SETTINGS, ...(parsed.settings || {}) };
+    state.sessions = Array.isArray(parsed.sessions) ? parsed.sessions.map(normalizeSession).filter(Boolean) : [];
+  } catch (e) {
+    console.warn("Could not parse stored data", e);
+  }
+}
+
+function save() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+  catch (e) {
+    if (!storageBroken) { storageBroken = true; toast("Could not save — storage unavailable"); }
+  }
+}
+
+function normalizeSession(s) {
+  if (!s || typeof s.start !== "number" || !isFinite(s.start)) return null;
+  return {
+    id: s.id || uuid(),
+    start: s.start,
+    end: (typeof s.end === "number" && isFinite(s.end)) ? s.end : null,
+    pauses: Array.isArray(s.pauses)
+      ? s.pauses.filter(p => p && typeof p.start === "number")
+                .map(p => ({ start: p.start, end: (typeof p.end === "number") ? p.end : null }))
+      : [],
+    autoStop: s.autoStop || null,
+    autoStopAck: s.autoStopAck !== false,
+    cutoffAck: !!s.cutoffAck
+  };
+}
+
+/* ============================================================
+   Interval maths
+   ============================================================ */
+function intervalsMinus(span, holes) {
+  let out = [{ ...span }];
+  for (const h of holes) {
+    const next = [];
+    for (const r of out) {
+      if (h.end <= r.start || h.start >= r.end) { next.push(r); continue; }
+      if (h.start > r.start) next.push({ start: r.start, end: h.start });
+      if (h.end < r.end) next.push({ start: h.end, end: r.end });
+    }
+    out = next;
+  }
+  return out.filter(r => r.end > r.start);
+}
+
+/** Pauses of a session, clipped to the session span and closed at `now` if open. */
+function pauseIntervals(s, now) {
+  const end = s.end != null ? s.end : now;
+  return s.pauses
+    .map(p => ({ start: clamp(p.start, s.start, end), end: clamp(p.end != null ? p.end : now, s.start, end) }))
+    .filter(p => p.end > p.start)
+    .sort((a, b) => a.start - b.start);
+}
+
+/** Worked (running) intervals of a session. */
+function workIntervals(s, now) {
+  const end = s.end != null ? s.end : now;
+  if (end <= s.start) return [];
+  return intervalsMinus({ start: s.start, end }, pauseIntervals(s, now));
+}
+
+const sumLen = (arr) => arr.reduce((a, r) => a + (r.end - r.start), 0);
+const workedMs = (s, now) => sumLen(workIntervals(s, now));
+
+const runningSession = () => state.sessions.find(s => s.end == null) || null;
+const isPaused = (s) => !!s && s.pauses.some(p => p.end == null);
+
+/* ============================================================
+   Dates (device timezone throughout)
+   ============================================================ */
+const startOfDay = (ts) => { const d = new Date(ts); d.setHours(0, 0, 0, 0); return d.getTime(); };
+const addDays = (ts, n) => { const d = new Date(ts); d.setDate(d.getDate() + n); d.setHours(0, 0, 0, 0); return d.getTime(); };
+/** Monday-based week start. */
+function startOfWeek(ts) {
+  const d = new Date(startOfDay(ts));
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return d.getTime();
+}
+const startOfMonth = (ts) => { const d = new Date(ts); d.setDate(1); d.setHours(0, 0, 0, 0); return d.getTime(); };
+const addMonths = (ts, n) => { const d = new Date(startOfMonth(ts)); d.setMonth(d.getMonth() + n); return d.getTime(); };
+const daysInMonth = (ts) => { const d = new Date(ts); return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); };
+
+const fmtTime = (ts) => new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+const fmtDate = (ts) => new Date(ts).toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" });
+const fmtDateLong = (ts) => new Date(ts).toLocaleDateString([], { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+
+/** `7h 30m` — for days and sessions. */
+function fmtHM(ms) {
+  const total = Math.max(0, Math.round(ms / MIN));
+  const h = Math.floor(total / 60), m = total % 60;
+  return h ? `${h}h ${m}m` : `${m}m`;
+}
+/** `37.5h` — for week and month totals. */
+const fmtDec = (ms) => `${(Math.max(0, ms) / HOUR).toFixed(1)}h`;
+/** `2:14:07` — the live stint readout. */
+function fmtClock(ms) {
+  const t = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), s = t % 60;
+  return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+/** For <input type="datetime-local">, which speaks local wall time. */
+function toInputValue(ts) {
+  const d = new Date(ts - d0offset(ts));
+  return d.toISOString().slice(0, 16);
+}
+const d0offset = (ts) => new Date(ts).getTimezoneOffset() * MIN;
+const fromInputValue = (v) => { const t = new Date(v).getTime(); return isFinite(t) ? t : null; };
+
+/* ============================================================
+   Auto-stop
+   ============================================================ */
+/** First occurrence of the cutoff time strictly after `ts`. */
+function nextCutoff(ts) {
+  const [hh, mm] = (state.settings.cutoff || "22:00").split(":").map(Number);
+  const d = new Date(ts);
+  d.setHours(hh || 0, mm || 0, 0, 0);
+  if (d.getTime() <= ts) d.setDate(d.getDate() + 1);
+  return d.getTime();
+}
+
+/** When this session must end if left alone. */
+function autoStopAt(s) {
+  const byLength = s.start + (state.settings.maxSessionHours || 16) * HOUR;
+  const byCutoff = s.cutoffAck ? Infinity : nextCutoff(s.start);
+  return Math.min(byLength, byCutoff);
+}
+
+/**
+ * End a running session at `at`. If it was paused at that moment the session
+ * ends where the pause began — we only count the hours worked before the break.
+ */
+function applyAutoStop(s, at) {
+  const reason = (at === s.start + (state.settings.maxSessionHours || 16) * HOUR) ? "maxlen" : "cutoff";
+  const openPause = s.pauses.find(p => p.end == null);
+  let endedAtPause = false;
+  let end;
+
+  if (openPause && openPause.start <= at) {
+    end = openPause.start;
+    endedAtPause = true;
+    s.pauses = s.pauses.filter(p => p !== openPause);
+  } else {
+    end = at;
+    if (openPause) s.pauses = s.pauses.filter(p => p !== openPause);
+  }
+
+  s.end = Math.max(end, s.start);
+  s.pauses = s.pauses
+    .map(p => ({ start: p.start, end: p.end == null ? s.end : p.end }))
+    .filter(p => p.start < s.end)
+    .map(p => ({ start: p.start, end: Math.min(p.end, s.end) }));
+  s.autoStop = { at, reason, endedAtPause };
+  s.autoStopAck = false;
+}
+
+/**
+ * Sweep the running session. The page cannot run while closed, so a cutoff that
+ * passed while you were away is applied retroactively here, on next open.
+ * If we watched the session cross its cutoff with the app open, we ask instead.
+ */
+let sawRunningBeforeCutoff = false;
+let askingStillWorking = false;
+
+function sweepAutoStop(now) {
+  const s = runningSession();
+  if (!s) { sawRunningBeforeCutoff = false; return false; }
+
+  const at = autoStopAt(s);
+  if (now < at) { sawRunningBeforeCutoff = true; return false; }
+
+  // We were here watching when it tripped — never delete work done in plain sight.
+  if (sawRunningBeforeCutoff && !askingStillWorking) {
+    askingStillWorking = true;
+    askStillWorking(s, at);
+    return false;
+  }
+  if (askingStillWorking) return false;
+
+  applyAutoStop(s, at);
+  save();
+  return true;
+}
+
+function askStillWorking(s, at) {
+  const isMax = at >= s.start + (state.settings.maxSessionHours || 16) * HOUR;
+  showAlert(
+    "Still working?",
+    isMax
+      ? `This session has been running for ${state.settings.maxSessionHours} hours — the maximum length.`
+      : `It is ${state.settings.cutoff}, the auto-stop time. Keep the timer running, or stop it now?`,
+    [
+      { label: "Stop now", cls: "btn primary", fn: () => { askingStillWorking = false; stopSession(); } },
+      isMax
+        ? null
+        : { label: "Keep going", cls: "btn", fn: () => { askingStillWorking = false; s.cutoffAck = true; sawRunningBeforeCutoff = true; save(); render(); } }
+    ].filter(Boolean)
+  );
+}
+
+/** The warning banner for a session that was stopped while you were away. */
+function showAutoStopNotice() {
+  const s = state.sessions.filter(x => x.autoStop && x.autoStopAck === false)
+                         .sort((a, b) => b.start - a.start)[0];
+  if (!s) return false;
+  const why = s.autoStop.reason === "maxlen"
+    ? `it hit the ${state.settings.maxSessionHours}-hour maximum session length`
+    : `the auto-stop time (${state.settings.cutoff}) passed`;
+  const tail = s.autoStop.endedAtPause
+    ? ` It was paused at the time, so it was closed at the start of that break — ${fmtTime(s.end)}.`
+    : ` It was closed at ${fmtTime(s.end)}.`;
+
+  showAlert(
+    "Timer stopped automatically",
+    `Your session from ${fmtDate(s.start)} ${fmtTime(s.start)} was stopped because ${why}.${tail} Check it if that is not when you finished.`,
+    [
+      { label: "Edit stop time", cls: "btn primary", fn: () => { ackAutoStop(s); openEntrySheet(s, startOfDay(s.end)); } },
+      { label: "That's fine", cls: "btn", fn: () => { ackAutoStop(s); } }
+    ]
+  );
+  return true;
+}
+function ackAutoStop(s) { s.autoStopAck = true; save(); closeAlert(); render(); }
+
+/* ============================================================
+   Timer actions
+   ============================================================ */
+function startSession() {
+  if (runningSession()) return;
+  const now = Date.now();
+  state.sessions.push(normalizeSession({ id: uuid(), start: now, end: null, pauses: [] }));
+  sawRunningBeforeCutoff = true;
+  save(); render();
+}
+function togglePause() {
+  const s = runningSession();
+  if (!s) return;
+  const now = Date.now();
+  const open = s.pauses.find(p => p.end == null);
+  if (open) open.end = now; else s.pauses.push({ start: now, end: null });
+  save(); render();
+}
+function stopSession() {
+  const s = runningSession();
+  if (!s) return;
+  const now = Date.now();
+  s.pauses.forEach(p => { if (p.end == null) p.end = now; });
+  s.pauses = s.pauses.filter(p => p.end > p.start);
+  s.end = Math.max(now, s.start);
+  closeAlert();
+  save(); render();
+}
+
+/* ============================================================
+   Per-day segments (a session crossing midnight is split here)
+   ============================================================ */
+function daySegments(dayStart, now) {
+  const dayEnd = addDays(dayStart, 1);
+  const segs = [];
+  for (const s of state.sessions) {
+    const sEnd = s.end != null ? s.end : now;
+    if (sEnd <= dayStart || s.start >= dayEnd) continue;
+    const live = s.end == null;
+    for (const w of workIntervals(s, now)) {
+      const a = Math.max(w.start, dayStart), b = Math.min(w.end, dayEnd);
+      if (b > a) segs.push({ type: "work", start: a, end: b, live, id: s.id });
+    }
+    for (const p of pauseIntervals(s, now)) {
+      const a = Math.max(p.start, dayStart), b = Math.min(p.end, dayEnd);
+      if (b > a) segs.push({ type: "pause", start: a, end: b, live: live && isPaused(s), id: s.id });
+    }
+  }
+  return segs.sort((a, b) => a.start - b.start);
+}
+
+const dayWorkedMs = (dayStart, now) =>
+  daySegments(dayStart, now).filter(s => s.type === "work").reduce((a, s) => a + (s.end - s.start), 0);
+
+function rangeWorkedMs(from, to, now) {
+  let total = 0;
+  for (let d = from; d < to; d = addDays(d, 1)) total += dayWorkedMs(d, now);
+  return total;
+}
+
+/** Sessions touching a given day, for the day-detail sheet. */
+function sessionsOnDay(dayStart, now) {
+  const dayEnd = addDays(dayStart, 1);
+  return state.sessions
+    .filter(s => (s.end != null ? s.end : now) > dayStart && s.start < dayEnd)
+    .sort((a, b) => a.start - b.start);
+}
+
+/* ============================================================
+   Rendering
+   ============================================================ */
+let view = "timer";            // timer | week | month
+let periodAnchor = Date.now(); // which week/month is on screen
+
+function render() {
+  const now = Date.now();
+  applyTheme();
+  $("screen-timer").hidden = view !== "timer";
+  $("screen-period").hidden = view === "timer";
+  $("title").textContent = view === "timer" ? "Time Manager" : (view === "week" ? "Week" : "Month");
+  document.querySelectorAll(".navitem").forEach(b => b.classList.toggle("active", b.dataset.nav === view));
+  if (view === "timer") renderTimer(now); else renderPeriod(now);
+}
+
+function renderTimer(now) {
+  const s = runningSession();
+  const paused = isPaused(s);
+  const elapsedEl = $("elapsed"), labelEl = $("elapsed-label");
+
+  if (s) {
+    // The whole unbroken stint, deliberately not reset at midnight.
+    elapsedEl.textContent = fmtClock(now - s.start);
+    elapsedEl.classList.remove("idle");
+    const worked = workedMs(s, now);
+    labelEl.textContent = paused
+      ? `Paused · ${fmtHM(worked)} worked · since ${fmtTime(s.start)}`
+      : `Since ${fmtTime(s.start)}` + (worked < now - s.start - MIN ? ` · ${fmtHM(worked)} worked` : "");
+    $("btn-start").hidden = true;
+    $("running-actions").hidden = false;
+    $("btn-pause").textContent = paused ? "Resume" : "Pause";
+  } else {
+    elapsedEl.textContent = "Not running";
+    elapsedEl.classList.add("idle");
+    labelEl.textContent = "";
+    $("btn-start").hidden = false;
+    $("running-actions").hidden = true;
+  }
+
+  $("today-total").textContent = fmtHM(dayWorkedMs(startOfDay(now), now));
+  const ws = startOfWeek(now);
+  $("week-total").textContent = fmtDec(rangeWorkedMs(ws, addDays(ws, 7), now));
+}
+
+function renderPeriod(now) {
+  const rows = $("per-rows");
+  rows.textContent = "";
+
+  let from, count, label, sumLabel;
+  if (view === "week") {
+    from = startOfWeek(periodAnchor);
+    count = 7;
+    const to = addDays(from, 6);
+    const sameMonth = new Date(from).getMonth() === new Date(to).getMonth();
+    label = sameMonth
+      ? `${new Date(from).getDate()}–${new Date(to).getDate()} ${new Date(to).toLocaleDateString([], { month: "long", year: "numeric" })}`
+      : `${new Date(from).toLocaleDateString([], { day: "numeric", month: "short" })} – ${new Date(to).toLocaleDateString([], { day: "numeric", month: "short", year: "numeric" })}`;
+    sumLabel = "Week total";
+  } else {
+    from = startOfMonth(periodAnchor);
+    count = daysInMonth(from);
+    label = new Date(from).toLocaleDateString([], { month: "long", year: "numeric" });
+    sumLabel = "Month total";
+  }
+
+  $("per-label").textContent = label;
+  const today = startOfDay(now);
+  let total = 0;
+
+  for (let i = 0; i < count; i++) {
+    const d = addDays(from, i);
+    const segs = daySegments(d, now);
+    const worked = segs.filter(x => x.type === "work").reduce((a, x) => a + (x.end - x.start), 0);
+    total += worked;
+    rows.appendChild(dayRow(d, segs, worked, d === today));
+  }
+
+  $("per-sum-k").textContent = sumLabel;
+  $("per-sum-v").textContent = fmtDec(total);
+  $("per-prev").disabled = false;
+  $("per-next").disabled = false;
+}
+
+function dayRow(dayStart, segs, worked, isToday) {
+  const dow = (new Date(dayStart).getDay() + 6) % 7;
+  const dayLen = addDays(dayStart, 1) - dayStart;   // 23h or 25h on the DST days
+  const row = el("button", "dayrow");
+  if (dow >= 5) row.classList.add("weekend");
+  if (isToday) row.classList.add("today");
+
+  const name = el("div", "d-name");
+  name.appendChild(el("b", null, DAY_NAMES[dow]));
+  name.appendChild(document.createTextNode(String(new Date(dayStart).getDate())));
+  row.appendChild(name);
+
+  const track = el("div", "track");
+  const grid = el("div", "grid");
+  [6, 12, 18].forEach(h => { const i = el("i"); i.style.left = (h / 24 * 100) + "%"; grid.appendChild(i); });
+  track.appendChild(grid);
+
+  for (const s of segs) {
+    const b = el("div", "seg " + s.type + (s.live ? " live" : ""));
+    const left = (s.start - dayStart) / dayLen * 100;
+    const width = (s.end - s.start) / dayLen * 100;
+    b.style.left = left + "%";
+    b.style.width = Math.max(width, 0.6) + "%";
+    track.appendChild(b);
+  }
+  row.appendChild(track);
+
+  const h = el("div", "d-hours" + (worked ? "" : " zero"), worked ? fmtHM(worked) : "–");
+  row.appendChild(h);
+
+  row.addEventListener("click", () => openDaySheet(dayStart));
+  return row;
+}
+
+/* ============================================================
+   Sheets
+   ============================================================ */
+function openSheet(title, build) {
+  $("sheet-title").textContent = title;
+  const body = $("sheet-body");
+  body.textContent = "";
+  build(body);
+  $("sheet").classList.add("open");
+  $("sheet-scrim").classList.add("open");
+}
+function closeSheet() {
+  $("sheet").classList.remove("open");
+  $("sheet-scrim").classList.remove("open");
+}
+
+/* ---- day detail ---- */
+function openDaySheet(dayStart) {
+  const now = Date.now();
+  openSheet(fmtDateLong(dayStart), (body) => {
+    const list = sessionsOnDay(dayStart, now);
+    const dayEnd = addDays(dayStart, 1);
+
+    if (!list.length) {
+      body.appendChild(el("div", "empty", "Nothing recorded on this day."));
+    } else {
+      for (const s of list) {
+        const running = s.end == null;
+        const sEnd = running ? now : s.end;
+        const clippedWork = workIntervals(s, now)
+          .map(w => ({ start: Math.max(w.start, dayStart), end: Math.min(w.end, dayEnd) }))
+          .filter(w => w.end > w.start);
+        const dayWorked = sumLen(clippedWork);
+        const pauseMs = sumLen(pauseIntervals(s, now));
+
+        const row = el("button", "entry");
+        const times = el("div", "times");
+        const head = el("div", null, `${fmtTime(s.start)} – ${running ? "running" : fmtTime(sEnd)}`);
+        if (s.start < dayStart) head.appendChild(mkPill("from previous day"));
+        if (sEnd > dayEnd) head.appendChild(mkPill("continues next day"));
+        if (s.autoStop) head.appendChild(mkPill("auto-stopped", true));
+        times.appendChild(head);
+        const sub = el("small", null,
+          (pauseMs > 0 ? `${fmtHM(pauseMs)} paused` : "no pauses") +
+          (workedMs(s, now) !== dayWorked ? ` · ${fmtHM(workedMs(s, now))} total` : ""));
+        times.appendChild(sub);
+        row.appendChild(times);
+        row.appendChild(el("div", "dur", fmtHM(dayWorked)));
+        const chev = el("div", "chev", "›");
+        row.appendChild(chev);
+        row.addEventListener("click", () => openEntrySheet(s, dayStart));
+        body.appendChild(row);
+      }
+      const tot = el("div", "summary");
+      tot.appendChild(el("div", "k", "Worked this day"));
+      tot.appendChild(el("div", "v", fmtHM(dayWorkedMs(dayStart, now))));
+      body.appendChild(tot);
+    }
+
+    const add = el("button", "btn primary", "Add entry");
+    add.style.marginTop = "18px";
+    add.addEventListener("click", () => openEntrySheet(null, dayStart));
+    body.appendChild(add);
+  });
+}
+function mkPill(text, warn) {
+  const p = el("span", "pill" + (warn ? " warn" : ""), text);
+  return p;
+}
+
+/* ---- add / edit an entry ---- */
+function openEntrySheet(session, dayStart) {
+  const creating = !session;
+  const now = Date.now();
+  const draft = creating
+    ? { id: uuid(), start: dayStart + 9 * HOUR, end: dayStart + 17 * HOUR, pauses: [], autoStop: null, autoStopAck: true, cutoffAck: false }
+    : JSON.parse(JSON.stringify(session));
+  const wasRunning = !creating && session.end == null;
+
+  openSheet(creating ? "Add entry" : "Edit entry", (body) => {
+    const startF = mkDateField("Started", draft.start);
+    body.appendChild(startF.wrap);
+
+    let endF = null;
+    if (wasRunning) {
+      const note = el("div", "hint", "This session is still running. Stop it from the timer screen to set an end time.");
+      note.style.margin = "0 0 4px";
+      body.appendChild(note);
+    } else {
+      endF = mkDateField("Ended", draft.end != null ? draft.end : draft.start + HOUR);
+      body.appendChild(endF.wrap);
+    }
+
+    if (draft.autoStop) {
+      const w = el("div", "hint",
+        draft.autoStop.reason === "maxlen"
+          ? `Stopped automatically — reached the ${state.settings.maxSessionHours}-hour maximum.`
+          : `Stopped automatically at the ${state.settings.cutoff} cutoff.`);
+      w.style.color = "var(--pause)";
+      body.appendChild(w);
+    }
+
+    // pauses
+    const pauseWrap = el("div", "field");
+    pauseWrap.appendChild(el("label", null, "Pauses"));
+    const plist = el("div", "pauselist");
+    pauseWrap.appendChild(plist);
+    body.appendChild(pauseWrap);
+
+    function drawPauses() {
+      plist.textContent = "";
+      const shown = draft.pauses.filter(p => p.end != null);
+      if (!shown.length) plist.appendChild(el("div", "hint", "No pauses recorded."));
+      shown.forEach((p) => {
+        const r = el("div", "pauserow");
+        r.appendChild(el("div", "times", `${fmtTime(p.start)} – ${fmtTime(p.end)}  (${fmtHM(p.end - p.start)})`));
+        const del = el("button", null, "Remove");
+        del.addEventListener("click", () => { draft.pauses = draft.pauses.filter(x => x !== p); drawPauses(); });
+        r.appendChild(del);
+        plist.appendChild(r);
+      });
+      if (draft.pauses.some(p => p.end == null)) {
+        plist.appendChild(el("div", "hint", "An open pause is in progress."));
+      }
+    }
+    drawPauses();
+
+    const saveBtn = el("button", "btn primary", creating ? "Add entry" : "Save changes");
+    saveBtn.addEventListener("click", () => {
+      const st = startF.value();
+      if (st == null) { toast("Start time is not valid"); return; }
+      draft.start = st;
+      if (endF) {
+        const en = endF.value();
+        if (en == null) { toast("End time is not valid"); return; }
+        if (en <= st) { toast("End must be after start"); return; }
+        const maxMs = (state.settings.maxSessionHours || 16) * HOUR;
+        if (en - st > maxMs) { toast(`Longer than the ${state.settings.maxSessionHours}h maximum`); return; }
+        draft.end = en;
+      }
+      const bound = draft.end != null ? draft.end : now;
+      draft.pauses = draft.pauses
+        .filter(p => p.end == null || (p.end > p.start))
+        .map(p => p.end == null ? p : { start: clamp(p.start, draft.start, bound), end: clamp(p.end, draft.start, bound) })
+        .filter(p => p.end == null || p.end > p.start);
+      draft.autoStop = null;
+      draft.autoStopAck = true;
+
+      if (creating) {
+        if (runningSession() && draft.end == null) { toast("A session is already running"); return; }
+        state.sessions.push(normalizeSession(draft));
+      } else {
+        const i = state.sessions.findIndex(x => x.id === session.id);
+        if (i >= 0) state.sessions[i] = normalizeSession(draft);
+      }
+      state.sessions.sort((a, b) => a.start - b.start);
+      save(); closeSheet(); render();
+      toast(creating ? "Entry added" : "Entry saved");
+    });
+    saveBtn.style.marginTop = "18px";
+    body.appendChild(saveBtn);
+
+    if (!creating) {
+      const del = el("button", "btn danger", "Delete entry");
+      del.addEventListener("click", () => {
+        showAlert("Delete this entry?", `${fmtDate(session.start)}, ${fmtTime(session.start)} – ${session.end ? fmtTime(session.end) : "running"}. This cannot be undone.`, [
+          { label: "Delete", cls: "btn danger", fn: () => {
+              state.sessions = state.sessions.filter(x => x.id !== session.id);
+              save(); closeAlert(); closeSheet(); render(); toast("Entry deleted");
+          } },
+          { label: "Cancel", cls: "btn", fn: closeAlert }
+        ]);
+      });
+      body.appendChild(del);
+    }
+  });
+}
+
+function mkDateField(label, ts) {
+  const wrap = el("div", "field");
+  wrap.appendChild(el("label", null, label));
+  const input = document.createElement("input");
+  input.type = "datetime-local";
+  input.value = toInputValue(ts);
+  wrap.appendChild(input);
+  return { wrap, value: () => fromInputValue(input.value) };
+}
+
+/* ---- settings ---- */
+function openSettingsSheet() {
+  openSheet("Settings", (body) => {
+    const cut = el("div", "field");
+    cut.appendChild(el("label", null, "Auto-stop time"));
+    const cutIn = document.createElement("input");
+    cutIn.type = "time"; cutIn.value = state.settings.cutoff;
+    cut.appendChild(cutIn);
+    cut.appendChild(el("div", "hint", "A running timer is stopped at this time. Applied when you next open the app; if the app is open you are asked first."));
+    body.appendChild(cut);
+
+    const maxF = el("div", "field");
+    maxF.appendChild(el("label", null, "Maximum session length"));
+    const maxIn = document.createElement("input");
+    maxIn.type = "number"; maxIn.min = "1"; maxIn.max = "24"; maxIn.step = "1";
+    maxIn.value = state.settings.maxSessionHours;
+    maxF.appendChild(maxIn);
+    maxF.appendChild(el("div", "hint", "A backstop for sessions started late in the evening, when the next auto-stop time is a long way off."));
+    body.appendChild(maxF);
+
+    const th = el("div", "field");
+    th.appendChild(el("label", null, "Theme"));
+    const sel = document.createElement("select");
+    [["auto", "Match device"], ["light", "Light"], ["dark", "Dark"]].forEach(([v, t]) => {
+      const o = document.createElement("option"); o.value = v; o.textContent = t; sel.appendChild(o);
+    });
+    sel.value = state.settings.theme;
+    sel.addEventListener("change", () => { state.settings.theme = sel.value; save(); applyTheme(); });
+    th.appendChild(sel);
+    body.appendChild(th);
+
+    const b = el("button", "btn primary", "Save settings");
+    b.style.marginTop = "14px";
+    b.addEventListener("click", () => {
+      if (/^\d{2}:\d{2}$/.test(cutIn.value)) state.settings.cutoff = cutIn.value;
+      const m = parseInt(maxIn.value, 10);
+      if (isFinite(m)) state.settings.maxSessionHours = clamp(m, 1, 24);
+      save(); closeSheet(); render(); toast("Settings saved");
+    });
+    body.appendChild(b);
+
+    body.appendChild(el("div", "hint", "The week runs Monday to Sunday. Times follow this device's timezone."));
+  });
+}
+
+/* ---- backup ---- */
+function exportData() {
+  const stamp = new Date().toISOString().slice(0, 10);
+  const name = `time-manager-${stamp}.json`;
+  const json = JSON.stringify(state, null, 2);
+  const file = new File([json], name, { type: "application/json" });
+
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    navigator.share({ files: [file], title: name })
+      .catch(err => { if (err && err.name !== "AbortError") downloadBlob(json, name); });
+  } else {
+    downloadBlob(json, name);
+  }
+}
+function downloadBlob(text, name) {
+  const url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
+  const a = document.createElement("a");
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+  toast("Exported");
+}
+
+/** Merge by id — importing the wrong file can never wipe what is already here. */
+function importData(text) {
+  let parsed;
+  try { parsed = JSON.parse(text); }
+  catch (e) { toast("That file is not valid JSON"); return; }
+  if (!parsed || !Array.isArray(parsed.sessions)) { toast("No sessions found in that file"); return; }
+
+  const known = new Set(state.sessions.map(s => s.id));
+  let added = 0;
+  for (const raw of parsed.sessions) {
+    const s = normalizeSession(raw);
+    if (!s || known.has(s.id)) continue;
+    if (s.end == null && runningSession()) s.end = s.start;   // never import a second running timer
+    state.sessions.push(s); known.add(s.id); added++;
+  }
+  state.sessions.sort((a, b) => a.start - b.start);
+  save(); closeSheet(); render();
+  toast(added ? `Merged ${added} entr${added === 1 ? "y" : "ies"}` : "Nothing new to merge");
+}
+
+function openDataSheet() {
+  openSheet("Backup", (body) => {
+    body.appendChild(el("div", "hint",
+      "Your hours live only in this browser. Clearing site data, or removing the app, deletes them. Export now and then."));
+
+    const ex = el("button", "btn primary", "Export JSON");
+    ex.style.marginTop = "16px";
+    ex.addEventListener("click", exportData);
+    body.appendChild(ex);
+
+    const im = el("button", "btn", "Import JSON");
+    const file = document.createElement("input");
+    file.type = "file"; file.accept = "application/json,.json"; file.hidden = true;
+    file.addEventListener("change", () => {
+      const f = file.files && file.files[0];
+      if (!f) return;
+      const r = new FileReader();
+      r.onload = () => importData(String(r.result));
+      r.onerror = () => toast("Could not read that file");
+      r.readAsText(f);
+      file.value = "";
+    });
+    im.addEventListener("click", () => file.click());
+    body.appendChild(im);
+    body.appendChild(file);
+
+    body.appendChild(el("div", "hint", "Import merges: entries already here are left alone, new ones are added. Nothing is overwritten."));
+
+    const stats = el("div", "summary");
+    stats.style.marginTop = "22px";
+    stats.appendChild(el("div", "k", "Entries stored"));
+    stats.appendChild(el("div", "v", String(state.sessions.length)));
+    body.appendChild(stats);
+  });
+}
+
+/* ============================================================
+   Alert / toast
+   ============================================================ */
+function showAlert(title, msg, actions) {
+  $("alert-title").textContent = title;
+  $("alert-msg").textContent = msg;
+  const box = $("alert-actions");
+  box.textContent = "";
+  actions.forEach(a => {
+    const b = el("button", a.cls || "btn", a.label);
+    b.addEventListener("click", a.fn);
+    box.appendChild(b);
+  });
+  $("alertbox").classList.add("open");
+  $("alert-scrim").classList.add("open");
+}
+function closeAlert() {
+  $("alertbox").classList.remove("open");
+  $("alert-scrim").classList.remove("open");
+}
+
+let toastTimer = null;
+function toast(msg) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 2600);
+}
+
+/* ============================================================
+   Theme
+   ============================================================ */
+function applyTheme() {
+  const t = state.settings.theme || "auto";
+  if (t === "auto") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.setAttribute("data-theme", t);
+  const dark = t === "dark" || (t === "auto" && matchMedia("(prefers-color-scheme: dark)").matches);
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.content = dark ? "#0f1419" : "#f6f7f9";
+}
+
+/* ============================================================
+   Navigation & wiring
+   ============================================================ */
+function openDrawer() { $("drawer").classList.add("open"); $("drawer-scrim").classList.add("open"); }
+function closeDrawer() { $("drawer").classList.remove("open"); $("drawer-scrim").classList.remove("open"); }
+
+function go(target) {
+  closeDrawer();
+  if (target === "settings") { openSettingsSheet(); return; }
+  if (target === "data") { openDataSheet(); return; }
+  if (target === "week" || target === "month") periodAnchor = Date.now();
+  view = target;
+  window.scrollTo(0, 0);
+  render();
+}
+
+$("btn-menu").addEventListener("click", openDrawer);
+$("drawer-scrim").addEventListener("click", closeDrawer);
+$("sheet-scrim").addEventListener("click", closeSheet);
+$("sheet-close").addEventListener("click", closeSheet);
+document.querySelectorAll(".navitem").forEach(b => b.addEventListener("click", () => go(b.dataset.nav)));
+
+$("btn-start").addEventListener("click", startSession);
+$("btn-pause").addEventListener("click", togglePause);
+$("btn-stop").addEventListener("click", () => {
+  const s = runningSession();
+  if (!s) return;
+  showAlert("Stop the timer?", `You have been going since ${fmtTime(s.start)} — ${fmtHM(workedMs(s, Date.now()))} worked.`, [
+    { label: "Stop", cls: "btn primary", fn: () => { closeAlert(); stopSession(); } },
+    { label: "Cancel", cls: "btn", fn: closeAlert }
+  ]);
+});
+
+$("per-prev").addEventListener("click", () => {
+  periodAnchor = view === "week" ? periodAnchor - 7 * DAY : addMonths(periodAnchor, -1);
+  render();
+});
+$("per-next").addEventListener("click", () => {
+  periodAnchor = view === "week" ? periodAnchor + 7 * DAY : addMonths(periodAnchor, 1);
+  render();
+});
+
+addEventListener("scroll", () => $("topbar").classList.toggle("scrolled", window.scrollY > 4), { passive: true });
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme);
+
+document.addEventListener("visibilitychange", () => { if (!document.hidden) tick(true); });
+
+/* ============================================================
+   Tick
+   ============================================================ */
+function tick(force) {
+  const changed = sweepAutoStop(Date.now());
+  if (changed) { showAutoStopNotice(); render(); return; }
+  if (view === "timer") renderTimer(Date.now());
+  else if (force) render();
+}
+
+/* ============================================================
+   Boot
+   ============================================================ */
+load();
+applyTheme();
+// Normalise the running-session flag before the first sweep so a cutoff that
+// passed while the app was closed is applied retroactively, not prompted about.
+sawRunningBeforeCutoff = false;
+sweepAutoStop(Date.now());
+render();
+showAutoStopNotice();
+if (storageBroken) {
+  showAlert("Storage unavailable", "This browser will not let the app save data. If you opened this as a local file, open it from its web address instead.", [
+    { label: "OK", cls: "btn primary", fn: closeAlert }
+  ]);
+}
+setInterval(tick, 1000);
+
+if ("serviceWorker" in navigator) {
+  addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+}
+</script>
+</body>
+</html>
