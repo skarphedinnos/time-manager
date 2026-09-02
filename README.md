@@ -39,9 +39,12 @@ Monday to Sunday. All times follow the device's own timezone.
 
 `test-profile.json` holds six weeks of fabricated hours — 33 entries, 5–9 hours on
 most weekdays, including a two-session day, a session crossing midnight, one
-auto-stopped at the cutoff, and a long midday break. Download it on the phone and
-use **Backup → Import**; because the file names itself `Test profile`, it lands in
-its own profile and leaves your real hours alone. Delete the profile when you're done.
+auto-stopped at the cutoff, and a long midday break.
+
+Easiest way in: **Backup → Load example data**, which fetches the file from the site
+itself — no download, no picking the right JSON out of a folder. Importing the file
+by hand works too. Either way it names itself `Test profile`, so it lands in its own
+profile and leaves your real hours alone. Delete that profile when you're done.
 
 The dates in it are fixed (20 July – 1 September 2026), so most of it sits in weeks
 *before* the one the app opens on. A dot on the `‹` arrow means there are entries

@@ -5,14 +5,15 @@
  * Nothing here touches your hours — those live in localStorage, not the cache.
  */
 // Keyed to APP_VERSION in index.html — bumping the version drops the old cache.
-const CACHE = "time-manager-1.1.5";
+const CACHE = "time-manager-1.1.6";
 const ASSETS = [
   "./",
   "./index.html",
   "./manifest.json",
   "./icon-192.png",
   "./icon-512.png",
-  "./icon-maskable-512.png"
+  "./icon-maskable-512.png",
+  "./test-profile.json"
 ];
 
 self.addEventListener("install", (e) => {

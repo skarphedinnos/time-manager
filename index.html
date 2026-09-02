@@ -449,7 +449,7 @@ button { cursor: pointer; border: none; background: none; }
    ============================================================ */
 // Bumped by tools/bump.js, which the pre-commit hook runs whenever the app
 // files change. Shown in the menu so you can tell what your phone actually has.
-const APP_VERSION = "1.1.5";
+const APP_VERSION = "1.1.6";
 
 const STORE_KEY = "time-manager-v1";
 const MIN = 60000, HOUR = 3600000, DAY = 86400000;
@@ -1498,6 +1498,26 @@ function openDataSheet() {
 
     body.appendChild(el("div", "hint",
       "Import merges: entries already here are left alone, new ones are added, nothing is overwritten. A file with a profile name inside goes to that profile, creating it if you do not have it yet. Older files without a name merge into the active profile."));
+
+    // Fetching the example file from this site removes the one step that keeps
+    // going wrong: finding the right JSON in a folder full of similar names.
+    const exHead = el("div", "hint", "Example data");
+    exHead.style.cssText = "margin-top:26px;font-weight:600;color:var(--text);font-size:14px";
+    body.appendChild(exHead);
+
+    const exampleBtn = el("button", "btn", "Load example data");
+    exampleBtn.addEventListener("click", () => {
+      exampleBtn.disabled = true;
+      exampleBtn.textContent = "Loading…";
+      fetch("test-profile.json", { cache: "no-cache" })
+        .then(r => { if (!r.ok) throw new Error(r.status); return r.text(); })
+        .then(t => importData(t, "test-profile.json (from this site)"))
+        .catch(() => { toast("Could not load the example — are you offline?"); })
+        .finally(() => { exampleBtn.disabled = false; exampleBtn.textContent = "Load example data"; });
+    });
+    body.appendChild(exampleBtn);
+    body.appendChild(el("div", "hint",
+      "Six weeks of made-up hours, fetched straight from this site — no download, no file picking. It lands in its own “Test profile” and never touches your own. Delete that profile when you are done with it."));
 
     const stats = el("div", "summary");
     stats.style.marginTop = "22px";
