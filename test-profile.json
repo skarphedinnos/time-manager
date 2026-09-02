@@ -1,0 +1,480 @@
+{
+  "version": 2,
+  "name": "Test profile",
+  "settings": {
+    "cutoff": "22:00",
+    "maxSessionHours": 16,
+    "theme": "auto"
+  },
+  "sessions": [
+    {
+      "id": "f8341e58-5811-4a35-ae5a-186686b90da5",
+      "start": 1784527320000,
+      "end": 1784556839514.1758,
+      "pauses": [
+        {
+          "start": 1784542380000,
+          "end": 1784544240000
+        }
+      ],
+      "autoStop": null,
+      "autoStopAck": true,
+      "cutoffAck": false
+    },
+    {
+      "id": "620eb26c-355e-4c0d-bdc5-38c5be06329c",
+      "start": 1784610120000,
+      "end": 1784632274271.6516,
+      "pauses": [],
+      "autoStop": null,
+      "autoStopAck": true,
+      "cutoffAck": false
+    },
+    {
+      "id": "220dc052-539e-4963-afaf-c6d3535bc6e1",
+      "start": 1784699580000,
+      "end": 1784725390964.7415,
+      "pauses": [
+        {
+          "start": 1784714760000,
+          "end": 1784716440000
+        },
+        {
+          "start": 1784722080000,
+          "end": 1784722800000
+        }
+      ],
+      "autoStop": null,
+      "autoStopAck": true,
+      "cutoffAck": false
+    },
+    {
+      "id": "3b46166e-757a-43be-ae72-d74798baf2a4",
+      "start": 1784784900000,
+      "end": 1784809963355.4268,
+      "pauses": [],
+      "autoStop": null,
+      "autoStopAck": true,
+      "cutoffAck": false
+    },
+    {
+      "id": "a5b07d2c-3d49-46a2-8546-45793d100178",
+      "start": 1784870100000,
+      "end": 1784897307756.0493,
+      "pauses": [
+        {
+          "start": 1784884740000,
+          "end": 1784886000000
+        }
+      ],
+      "autoStop": null,
+      "autoStopAck": true,
+      "cutoffAck": false
+    },
+    {
+      "id": "7eb84a0d-03ef-4a58-8332-ea4a7fd4228c",
+      "start": 1785131520000,
+      "end": 1785162062497.6926,
+      "pauses": [
+        {
+          "start": 1785148380000,
+          "end": 1785150060000
+        },
+        {
+          "start": 1785157440000,
+          "end": 1785158280000
+        }
+      ],
+      "autoStop": null,
+      "autoStopAck": true,
+      "cutoffAck": false
+    },
+    {
+      "id": "b2229532-5120-41fd-8e78-0f0736019028",
+      "start": 1785219420000,
+      "end": 1785244842517.4043,
+      "pauses": [],
+      "autoStop": null,
+      "autoStopAck": true,
+      "cutoffAck": false
+    },
+    {
+      "id": "35eba750-3aa5-48e2-9a67-ee9893c0b0bf",
+      "start": 1785307500000,
+      "end": 1785333465289.3066,
+      "pauses": [
+        {
+          "start": 1785320640000,
+          "end": 1785322140000
+        }
+      ],
+      "autoStop": null,
+      "autoStopAck": true,
+      "cutoffAck": false
+    },
+    {
+      "id": "0172ccf6-fb3b-46b5-a69d-ef1574395055",
+      "start": 1785391680000,
+      "end": 1785421009087.4287,
+      "pauses": [
+        {
+          "start": 1785405960000,
+          "end": 1785408540000
+        },
+        {
+          "start": 1785418800000,
+          "end": 1785419760000
+        }
+      ],
+      "autoStop": null,
+      "autoStopAck": true,
+      "cutoffAck": false
+    },
+    {
+      "id": "d52458ba-91e3-4c99-a8bd-25baecf335d7",
+      "start": 1785476940000,
+      "end": 1785508928248.0693,
+      "pauses": [
+        {
+          "start": 1785491100000,
+          "end": 1785493380000
+        },
+        {
+          "start": 1785502560000,
+          "end": 1785503460000
+        }
+      ],
+      "autoStop": null,
+      "autoStopAck": true,
+      "cutoffAck": false
+    },
+    {
+      "id": "4a6ea841-ec99-40aa-9e3e-8874006b07a4",
+      "start": 1785739500000,
+      "end": 1785764481837.7698,
+      "pauses": [
+        {
+          "start": 1785757380000,
+          "end": 1785758520000
+        }
+      ],
+      "autoStop": null,
+      "autoStopAck": true,
+      "cutoffAck": false
+    },
+    {
+      "id": "74e869f3-2673-4d89-8803-45c56ce506a0",
+      "start": 1785823980000,
+      "end": 1785850825637.9832,
+      "pauses": [
+        {
+          "start": 1785837780000,
+          "end": 1785840180000
+        }
+      ],
+      "autoStop": null,
+      "autoStopAck": true,
+      "cutoffAck": false
+    },
+    {
+      "id": "63789a14-a3de-4654-8341-83f2cadf8182",
+      "start": 1785910080000,
+      "end": 1785932577664.953,
+      "pauses": [
+        {
+          "start": 1785924600000,
+          "end": 1785926940000
+        }
+      ],
+      "autoStop": null,
+      "autoStopAck": true,
+      "cutoffAck": false
+    },
+    {
+      "id": "280b915e-1146-483b-b7d6-834ccd85a14c",
+      "start": 1785993120000,
+      "end": 1786020149264.0708,
+      "pauses": [
+        {
+          "start": 1786007520000,
+          "end": 1786009380000
+        }
+      ],
+      "autoStop": null,
+      "autoStopAck": true,
+      "cutoffAck": false
+    },
+    {
+      "id": "c8fcff19-3849-4937-992d-82dcdc06f8cc",
+      "start": 1786080600000,
+      "end": 1786108988519.8904,
+      "pauses": [
+        {
+          "start": 1786095180000,
+          "end": 1786096380000
+        }
+      ],
+      "autoStop": null,
+      "autoStopAck": true,
+      "cutoffAck": false
+    },
+    {
+      "id": "0034d054-fb38-4922-8de7-d825fbd10384",
+      "start": 1786344420000,
+      "end": 1786373805889.765,
+      "pauses": [
+        {
+          "start": 1786357800000,
+          "end": 1786359720000
+        }
+      ],
+      "autoStop": null,
+      "autoStopAck": true,
+      "cutoffAck": false
+    },
+    {
+      "id": "365aa87b-fe02-4e5c-a3d9-60cfe052b3f3",
+      "start": 1786429740000,
+      "end": 1786457132474.7874,
+      "pauses": [
+        {
+          "start": 1786444980000,
+          "end": 1786445880000
+        }
+      ],
+      "autoStop": null,
+      "autoStopAck": true,
+      "cutoffAck": false
+    },
+    {
+      "id": "0d159624-c1cb-4a39-ace7-127eb0db499e",
+      "start": 1786514700000,
+      "end": 1786539900000,
+      "pauses": [
+        {
+          "start": 1786528200000,
+          "end": 1786530300000
+        }
+      ],
+      "autoStop": null,
+      "autoStopAck": true,
+      "cutoffAck": false
+    },
+    {
+      "id": "826a88ad-d501-4028-bf3d-854c16ebe830",
+      "start": 1786555800000,
+      "end": 1786562100000,
+      "pauses": [],
+      "autoStop": null,
+      "autoStopAck": true,
+      "cutoffAck": false
+    },
+    {
+      "id": "4b93f507-7ba8-4e69-a857-e195243937f3",
+      "start": 1786600440000,
+      "end": 1786628711062.1194,
+      "pauses": [
+        {
+          "start": 1786616940000,
+          "end": 1786618380000
+        },
+        {
+          "start": 1786628220000,
+          "end": 1786629060000
+        }
+      ],
+      "autoStop": null,
+      "autoStopAck": true,
+      "cutoffAck": false
+    },
+    {
+      "id": "42e699e9-4fa2-41e9-b5e8-e310f158adcc",
+      "start": 1786686060000,
+      "end": 1786719957300.8345,
+      "pauses": [
+        {
+          "start": 1786702560000,
+          "end": 1786705440000
+        }
+      ],
+      "autoStop": null,
+      "autoStopAck": true,
+      "cutoffAck": false
+    },
+    {
+      "id": "b5309dbe-5f88-45e1-8477-d42d6612c067",
+      "start": 1786948920000,
+      "end": 1786981023326.0735,
+      "pauses": [
+        {
+          "start": 1786966680000,
+          "end": 1786967760000
+        }
+      ],
+      "autoStop": null,
+      "autoStopAck": true,
+      "cutoffAck": false
+    },
+    {
+      "id": "6018e4ed-0bbf-43ea-9d26-e3957a178967",
+      "start": 1787123460000,
+      "end": 1787151435927.8489,
+      "pauses": [
+        {
+          "start": 1787138340000,
+          "end": 1787139720000
+        },
+        {
+          "start": 1787149020000,
+          "end": 1787149920000
+        }
+      ],
+      "autoStop": null,
+      "autoStopAck": true,
+      "cutoffAck": false
+    },
+    {
+      "id": "87723aa8-2f80-40ee-8dd7-96fde7ae38f6",
+      "start": 1787206560000,
+      "end": 1787233295218.601,
+      "pauses": [
+        {
+          "start": 1787222220000,
+          "end": 1787224560000
+        }
+      ],
+      "autoStop": null,
+      "autoStopAck": true,
+      "cutoffAck": false
+    },
+    {
+      "id": "a8746c1a-27e6-4dda-95f7-7655704c7508",
+      "start": 1787331600000,
+      "end": 1787355000000,
+      "pauses": [
+        {
+          "start": 1787341200000,
+          "end": 1787342700000
+        }
+      ],
+      "autoStop": null,
+      "autoStopAck": true,
+      "cutoffAck": false
+    },
+    {
+      "id": "a20f4c73-9826-40a5-a39d-220fca096eab",
+      "start": 1787548560000,
+      "end": 1787576465914.1396,
+      "pauses": [
+        {
+          "start": 1787560920000,
+          "end": 1787562360000
+        },
+        {
+          "start": 1787568840000,
+          "end": 1787569500000
+        }
+      ],
+      "autoStop": null,
+      "autoStopAck": true,
+      "cutoffAck": false
+    },
+    {
+      "id": "82b3954d-a8cf-442d-bfe4-8d4ce2c227a6",
+      "start": 1787641620000,
+      "end": 1787671987267.3433,
+      "pauses": [
+        {
+          "start": 1787658780000,
+          "end": 1787660400000
+        }
+      ],
+      "autoStop": null,
+      "autoStopAck": true,
+      "cutoffAck": false
+    },
+    {
+      "id": "7d436907-d64c-485f-a08d-04e9ce47e631",
+      "start": 1787742000000,
+      "end": 1787774400000,
+      "pauses": [
+        {
+          "start": 1787754600000,
+          "end": 1787756100000
+        }
+      ],
+      "autoStop": {
+        "at": 1787774400000,
+        "reason": "cutoff",
+        "endedAtPause": false
+      },
+      "autoStopAck": false,
+      "cutoffAck": false
+    },
+    {
+      "id": "75bec738-dbe9-4b01-bc42-8c92d272d24d",
+      "start": 1787810280000,
+      "end": 1787833508202.0825,
+      "pauses": [
+        {
+          "start": 1787827500000,
+          "end": 1787829480000
+        }
+      ],
+      "autoStop": null,
+      "autoStopAck": true,
+      "cutoffAck": false
+    },
+    {
+      "id": "8c7b985a-66ae-41cb-9397-564c31a8ac54",
+      "start": 1787896440000,
+      "end": 1787927853874.2856,
+      "pauses": [
+        {
+          "start": 1787910480000,
+          "end": 1787911920000
+        }
+      ],
+      "autoStop": null,
+      "autoStopAck": true,
+      "cutoffAck": false
+    },
+    {
+      "id": "683f003d-be68-4282-aa7c-66daff8a0244",
+      "start": 1788072600000,
+      "end": 1788095085660.944,
+      "pauses": [],
+      "autoStop": null,
+      "autoStopAck": true,
+      "cutoffAck": false
+    },
+    {
+      "id": "b1c2f0c4-587c-479c-86ab-3d3bf3cd72ad",
+      "start": 1788153120000,
+      "end": 1788184164694.7527,
+      "pauses": [
+        {
+          "start": 1788170220000,
+          "end": 1788171420000
+        }
+      ],
+      "autoStop": null,
+      "autoStopAck": true,
+      "cutoffAck": false
+    },
+    {
+      "id": "059fe637-9a5e-4983-acad-90310c60fa36",
+      "start": 1788241200000,
+      "end": 1788277200000,
+      "pauses": [
+        {
+          "start": 1788255000000,
+          "end": 1788262200000
+        }
+      ],
+      "autoStop": null,
+      "autoStopAck": true,
+      "cutoffAck": false
+    }
+  ]
+}

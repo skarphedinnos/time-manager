@@ -202,6 +202,8 @@ button { cursor: pointer; border: none; background: none; }
   display: flex; flex-direction: column;
 }
 #drawer.open { transform: none; }
+#drawer .navitem em { display: block; font-style: normal; font-size: 12px; color: var(--text-dim); margin-top: 1px; }
+#drawer .navitem.active em { color: var(--text-dim); font-weight: 400; }
 #drawer h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .07em; color: var(--text-dim); margin: 6px 20px 10px; font-weight: 600; }
 .navitem {
   display: flex; align-items: center; gap: 14px; width: 100%;
@@ -358,6 +360,10 @@ button { cursor: pointer; border: none; background: none; }
   <button class="navitem" data-nav="month">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M7 14h3M14 14h3M7 17.5h3M14 17.5h3"/></svg> Month
   </button>
+  <button class="navitem" data-nav="profiles">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
+    <span>Profiles<em id="active-profile"></em></span>
+  </button>
   <button class="navitem" data-nav="data">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Backup
   </button>
@@ -417,29 +423,98 @@ const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
    State
    ============================================================ */
 const DEFAULT_SETTINGS = { cutoff: "22:00", maxSessionHours: 16, theme: "auto" };
+const DEFAULT_PROFILE_NAME = "My hours";
 
-let state = { version: 1, settings: { ...DEFAULT_SETTINGS }, sessions: [] };
+/* Storage is v2: several named profiles, one of them active. `state.sessions`
+   always points at the active profile's sessions so the rest of the app can
+   stay profile-unaware. Settings are deliberately global — switching profile
+   should not change your theme or your cutoff. */
+let state = {
+  version: 2,
+  settings: { ...DEFAULT_SETTINGS },
+  activeProfileId: null,
+  profiles: [],
+  sessions: []
+};
 let storageBroken = false;
+
+const activeProfile = () =>
+  state.profiles.find(p => p.id === state.activeProfileId) || state.profiles[0] || null;
+
+/** Push the working array back onto the active profile before serialising. */
+function syncActive() {
+  const p = activeProfile();
+  if (p) p.sessions = state.sessions;
+}
+
+function makeProfile(name, sessions) {
+  return { id: uuid(), name: String(name || DEFAULT_PROFILE_NAME).slice(0, 60), sessions: sessions || [] };
+}
+
+/** Accepts both the v1 single-dataset shape and the v2 profile shape. */
+function adoptStored(parsed) {
+  state.settings = { ...DEFAULT_SETTINGS, ...(parsed.settings || {}) };
+
+  if (Array.isArray(parsed.profiles) && parsed.profiles.length) {
+    state.profiles = parsed.profiles.map(p => ({
+      id: p.id || uuid(),
+      name: String(p.name || DEFAULT_PROFILE_NAME).slice(0, 60),
+      sessions: Array.isArray(p.sessions) ? p.sessions.map(normalizeSession).filter(Boolean) : []
+    }));
+    state.activeProfileId = parsed.activeProfileId || state.profiles[0].id;
+    if (!state.profiles.some(p => p.id === state.activeProfileId)) {
+      state.activeProfileId = state.profiles[0].id;
+    }
+  } else {
+    // v1 file or v1 localStorage: one unnamed dataset becomes one profile.
+    const sessions = Array.isArray(parsed.sessions)
+      ? parsed.sessions.map(normalizeSession).filter(Boolean) : [];
+    const p = makeProfile(parsed.name || DEFAULT_PROFILE_NAME, sessions);
+    state.profiles = [p];
+    state.activeProfileId = p.id;
+  }
+  state.sessions = (activeProfile() || {}).sessions || [];
+}
 
 function load() {
   let raw = null;
   try { raw = localStorage.getItem(STORE_KEY); }
-  catch (e) { storageBroken = true; return; }
-  if (!raw) return;
-  try {
-    const parsed = JSON.parse(raw);
-    state.settings = { ...DEFAULT_SETTINGS, ...(parsed.settings || {}) };
-    state.sessions = Array.isArray(parsed.sessions) ? parsed.sessions.map(normalizeSession).filter(Boolean) : [];
-  } catch (e) {
-    console.warn("Could not parse stored data", e);
+  catch (e) { storageBroken = true; }
+  if (raw) {
+    try { adoptStored(JSON.parse(raw)); }
+    catch (e) { console.warn("Could not parse stored data", e); }
+  }
+  if (!state.profiles.length) {
+    const p = makeProfile(DEFAULT_PROFILE_NAME, []);
+    state.profiles = [p];
+    state.activeProfileId = p.id;
+    state.sessions = p.sessions;
   }
 }
 
 function save() {
-  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+  syncActive();
+  const doc = {
+    version: 2,
+    settings: state.settings,
+    activeProfileId: state.activeProfileId,
+    profiles: state.profiles
+  };
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(doc)); }
   catch (e) {
     if (!storageBroken) { storageBroken = true; toast("Could not save — storage unavailable"); }
   }
+}
+
+function switchProfile(id) {
+  if (id === state.activeProfileId) return;
+  syncActive();
+  state.activeProfileId = id;
+  state.sessions = (activeProfile() || {}).sessions || [];
+  sawRunningBeforeCutoff = false;
+  save(); render();
+  sweepAutoStop(Date.now());
+  showAutoStopNotice();
 }
 
 function normalizeSession(s) {
@@ -734,6 +809,9 @@ function render() {
   $("screen-period").hidden = view === "timer";
   $("title").textContent = view === "timer" ? "Time Manager" : (view === "week" ? "Week" : "Month");
   document.querySelectorAll(".navitem").forEach(b => b.classList.toggle("active", b.dataset.nav === view));
+  const ap = activeProfile();
+  const apEl = $("active-profile");
+  if (apEl) apEl.textContent = ap && state.profiles.length > 1 ? ap.name : "";
   if (view === "timer") renderTimer(now); else renderPeriod(now);
 }
 
@@ -1074,9 +1152,18 @@ function openSettingsSheet() {
 
 /* ---- backup ---- */
 function exportData() {
+  syncActive();
+  const prof = activeProfile();
   const stamp = new Date().toISOString().slice(0, 10);
-  const name = `time-manager-${stamp}.json`;
-  const json = JSON.stringify(state, null, 2);
+  const slug = (prof ? prof.name : "hours").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "hours";
+  const name = `time-manager-${slug}-${stamp}.json`;
+  // Shaped so an older build, which knows nothing of profiles, still reads it.
+  const json = JSON.stringify({
+    version: 2,
+    name: prof ? prof.name : DEFAULT_PROFILE_NAME,
+    settings: state.settings,
+    sessions: state.sessions
+  }, null, 2);
   const file = new File([json], name, { type: "application/json" });
 
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -1095,30 +1182,172 @@ function downloadBlob(text, name) {
   toast("Exported");
 }
 
-/** Merge by id — importing the wrong file can never wipe what is already here. */
+/**
+ * Merge by id — importing the wrong file can never wipe what is already here.
+ *
+ * A file carrying a `name` lands in the profile of that name, creating it if
+ * needed. A file without one is the old single-dataset format, and merges into
+ * the active profile exactly as it always did.
+ */
 function importData(text) {
   let parsed;
   try { parsed = JSON.parse(text); }
   catch (e) { toast("That file is not valid JSON"); return; }
+
+  // A v2 export of several profiles at once.
+  if (parsed && Array.isArray(parsed.profiles) && !Array.isArray(parsed.sessions)) {
+    let total = 0, touched = [];
+    for (const raw of parsed.profiles) {
+      const n = mergeIntoProfile(raw.name, raw.sessions);
+      if (n.added) { total += n.added; touched.push(n.profile.name); }
+    }
+    save(); closeSheet(); render();
+    toast(total ? `Merged ${total} into ${touched.join(", ")}` : "Nothing new to merge");
+    return;
+  }
+
   if (!parsed || !Array.isArray(parsed.sessions)) { toast("No sessions found in that file"); return; }
 
-  const known = new Set(state.sessions.map(s => s.id));
-  let added = 0;
-  for (const raw of parsed.sessions) {
+  const named = typeof parsed.name === "string" && parsed.name.trim();
+  const res = mergeIntoProfile(named ? parsed.name : null, parsed.sessions);
+
+  save(); closeSheet(); render();
+  if (!res.added) { toast(named ? `“${res.profile.name}” is already up to date` : "Nothing new to merge"); return; }
+  toast(`Merged ${res.added} entr${res.added === 1 ? "y" : "ies"} into “${res.profile.name}”`);
+}
+
+/** Merge sessions into the named profile (creating it), or the active one when unnamed. */
+function mergeIntoProfile(name, rawSessions) {
+  syncActive();
+  let profile;
+  if (name) {
+    const key = String(name).trim().toLowerCase();
+    profile = state.profiles.find(p => p.name.trim().toLowerCase() === key);
+    if (!profile) { profile = makeProfile(String(name).trim(), []); state.profiles.push(profile); }
+  } else {
+    profile = activeProfile();
+  }
+  if (!profile) return { profile: { name: "" }, added: 0 };
+
+  const known = new Set(profile.sessions.map(s => s.id));
+  const hasRunning = profile.sessions.some(s => s.end == null);
+  let added = 0, running = hasRunning;
+  for (const raw of (Array.isArray(rawSessions) ? rawSessions : [])) {
     const s = normalizeSession(raw);
     if (!s || known.has(s.id)) continue;
-    if (s.end == null && runningSession()) s.end = s.start;   // never import a second running timer
-    state.sessions.push(s); known.add(s.id); added++;
+    if (s.end == null) { if (running) s.end = s.start; else running = true; }
+    profile.sessions.push(s); known.add(s.id); added++;
   }
-  state.sessions.sort((a, b) => a.start - b.start);
-  save(); closeSheet(); render();
-  toast(added ? `Merged ${added} entr${added === 1 ? "y" : "ies"}` : "Nothing new to merge");
+  profile.sessions.sort((a, b) => a.start - b.start);
+  if (profile.id === state.activeProfileId) state.sessions = profile.sessions;
+  return { profile, added };
+}
+
+function openProfilesSheet() {
+  openSheet("Profiles", (body) => {
+    syncActive();
+    const now = Date.now();
+
+    body.appendChild(el("div", "hint",
+      "Each profile keeps its own hours. Importing a file that carries a name lands in that profile."));
+
+    for (const p of state.profiles) {
+      const active = p.id === state.activeProfileId;
+      const total = p.sessions.reduce((a, s) => a + workedMs(s, now), 0);
+
+      const row = el("button", "entry");
+      const times = el("div", "times");
+      const head = el("div", null, p.name);
+      if (active) head.appendChild(mkPill("active"));
+      times.appendChild(head);
+      times.appendChild(el("small", null,
+        `${p.sessions.length} entr${p.sessions.length === 1 ? "y" : "ies"} · ${fmtDec(total)} total`));
+      row.appendChild(times);
+
+      const edit = el("div", "chev", "···");
+      row.appendChild(edit);
+      row.addEventListener("click", () => {
+        if (!active) { switchProfile(p.id); closeSheet(); toast(`Switched to “${p.name}”`); }
+        else openProfileEditSheet(p);
+      });
+      body.appendChild(row);
+    }
+
+    const add = el("button", "btn primary", "New profile");
+    add.style.marginTop = "18px";
+    add.addEventListener("click", () => openProfileEditSheet(null));
+    body.appendChild(add);
+
+    body.appendChild(el("div", "hint", "Tap a profile to switch to it. Tap the active one to rename or delete it."));
+  });
+}
+
+function openProfileEditSheet(profile) {
+  const creating = !profile;
+  openSheet(creating ? "New profile" : "Edit profile", (body) => {
+    const f = el("div", "field");
+    f.appendChild(el("label", null, "Name"));
+    const input = document.createElement("input");
+    input.type = "text";
+    input.maxLength = 60;
+    input.placeholder = "e.g. Second job";
+    input.value = creating ? "" : profile.name;
+    f.appendChild(input);
+    body.appendChild(f);
+
+    const ok = el("button", "btn primary", creating ? "Create and switch to it" : "Save name");
+    ok.addEventListener("click", () => {
+      const name = input.value.trim();
+      if (!name) { toast("Give the profile a name"); return; }
+      const clash = state.profiles.some(p => p.name.trim().toLowerCase() === name.toLowerCase() && (creating || p.id !== profile.id));
+      if (clash) { toast("A profile already has that name"); return; }
+      if (creating) {
+        syncActive();
+        const p = makeProfile(name, []);
+        state.profiles.push(p);
+        save();
+        switchProfile(p.id);
+        closeSheet(); toast(`Switched to “${name}”`);
+      } else {
+        profile.name = name;
+        save(); render(); openProfilesSheet(); toast("Renamed");
+      }
+    });
+    body.appendChild(ok);
+
+    if (!creating) {
+      const del = el("button", "btn danger", "Delete profile");
+      del.addEventListener("click", () => {
+        if (state.profiles.length < 2) { toast("This is your only profile"); return; }
+        showAlert("Delete this profile?",
+          `“${profile.name}” and its ${profile.sessions.length} entries will be removed from this device. This cannot be undone — export it first if you might want it back.`, [
+          { label: "Delete", cls: "btn danger", fn: () => {
+              const wasActive = profile.id === state.activeProfileId;
+              state.profiles = state.profiles.filter(p => p.id !== profile.id);
+              if (wasActive) {
+                state.activeProfileId = state.profiles[0].id;
+                state.sessions = state.profiles[0].sessions;
+              }
+              save(); closeAlert(); render(); openProfilesSheet(); toast("Profile deleted");
+          } },
+          { label: "Cancel", cls: "btn", fn: closeAlert }
+        ]);
+      });
+      body.appendChild(del);
+    }
+  });
 }
 
 function openDataSheet() {
   openSheet("Backup", (body) => {
+    const ap = activeProfile();
     body.appendChild(el("div", "hint",
-      "Your hours live only in this browser. Clearing site data, or removing the app, deletes them. Export now and then."));
+      `Your hours live only in this browser. Clearing site data, or removing the app, deletes them. Export now and then.`));
+    if (ap) {
+      const which = el("div", "hint", `Export writes the active profile, “${ap.name}”, with its name inside the file.`);
+      which.style.marginTop = "6px";
+      body.appendChild(which);
+    }
 
     const ex = el("button", "btn primary", "Export JSON");
     ex.style.marginTop = "16px";
@@ -1141,11 +1370,12 @@ function openDataSheet() {
     body.appendChild(im);
     body.appendChild(file);
 
-    body.appendChild(el("div", "hint", "Import merges: entries already here are left alone, new ones are added. Nothing is overwritten."));
+    body.appendChild(el("div", "hint",
+      "Import merges: entries already here are left alone, new ones are added, nothing is overwritten. A file with a profile name inside goes to that profile, creating it if you do not have it yet. Older files without a name merge into the active profile."));
 
     const stats = el("div", "summary");
     stats.style.marginTop = "22px";
-    stats.appendChild(el("div", "k", "Entries stored"));
+    stats.appendChild(el("div", "k", "Entries in this profile"));
     stats.appendChild(el("div", "v", String(state.sessions.length)));
     body.appendChild(stats);
   });
@@ -1203,6 +1433,7 @@ function go(target) {
   closeDrawer();
   if (target === "settings") { openSettingsSheet(); return; }
   if (target === "data") { openDataSheet(); return; }
+  if (target === "profiles") { openProfilesSheet(); return; }
   if (target === "week" || target === "month") periodAnchor = Date.now();
   view = target;
   window.scrollTo(0, 0);
