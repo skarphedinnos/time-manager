@@ -43,6 +43,11 @@ auto-stopped at the cutoff, and a long midday break. Download it on the phone an
 use **Backup → Import**; because the file names itself `Test profile`, it lands in
 its own profile and leaves your real hours alone. Delete the profile when you're done.
 
+The dates in it are fixed (20 July – 1 September 2026), so most of it sits in weeks
+*before* the one the app opens on. A dot on the `‹` arrow means there are entries
+further back. Don't regenerate this file if you have already imported it — the entry
+ids would change and you would end up with two of everything.
+
 ![QR code for the test profile](qr-test-profile.png)
 
 ## File format
