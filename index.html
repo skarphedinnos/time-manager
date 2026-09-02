@@ -78,15 +78,16 @@ button, input, select { font: inherit; color: inherit; }
 button { cursor: pointer; border: none; background: none; }
 
 /* ---------- chrome ---------- */
+#header { position: sticky; top: 0; z-index: 20; background: var(--bg); }
 .topbar {
-  position: sticky; top: 0; z-index: 20;
   display: flex; align-items: center; gap: 12px;
   padding: max(8px, env(safe-area-inset-top)) 14px 8px;
-  background: var(--bg);
   border-bottom: 1px solid transparent;
 }
 .topbar.scrolled { border-bottom-color: var(--line); }
-.topbar .titles { min-width: 0; }
+.topbar .titles { min-width: 0; text-align: left; padding: 4px 8px; margin-left: -8px; border-radius: 10px; }
+.topbar .titles:active { background: var(--surface-2); }
+.topbar #topbar-profile::after { content: " ▾"; opacity: .6; }
 .topbar h1 { font-size: 17px; font-weight: 600; margin: 0; letter-spacing: -.01em; }
 .topbar #topbar-profile {
   display: none; font-size: 12px; color: var(--text-dim);
@@ -142,6 +143,17 @@ button { cursor: pointer; border: none; background: none; }
 }
 .total-card .k { color: var(--text-dim); font-size: 12.5px; letter-spacing: .03em; text-transform: uppercase; }
 .total-card .v { font-size: 21px; font-weight: 600; font-variant-numeric: tabular-nums; margin-top: 3px; }
+
+#profile-hint {
+  display: flex; align-items: center; gap: 12px;
+  margin: 0 14px 12px; padding: 12px 14px;
+  background: var(--surface); border: 1px solid var(--accent);
+  border-radius: 14px; font-size: 13px; line-height: 1.35;
+}
+#profile-hint button {
+  margin-left: auto; color: var(--accent); font-weight: 600;
+  white-space: nowrap; padding: 6px 2px;
+}
 
 /* ---------- list screens ---------- */
 .screen { padding: 0 14px calc(30px + env(safe-area-inset-bottom)); }
@@ -319,20 +331,24 @@ button { cursor: pointer; border: none; background: none; }
 }
 #alertbox.open { opacity: 1; pointer-events: auto; transform: translate(-50%,-50%) scale(1); }
 #alertbox h3 { margin: 0 0 8px; font-size: 18px; }
-#alertbox p { margin: 0 0 18px; color: var(--text-dim); font-size: 14.5px; line-height: 1.5; }
+#alertbox p { margin: 0 0 18px; color: var(--text-dim); font-size: 14.5px; line-height: 1.55; white-space: pre-line; }
 </style>
 </head>
 <body>
 
+<div id="header">
 <div class="topbar" id="topbar">
   <button class="iconbtn" id="btn-menu" aria-label="Menu">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
   </button>
-  <div class="titles">
+  <button class="titles" id="titles">
     <h1 id="title">Time Manager</h1>
     <span id="topbar-profile"></span>
-  </div>
+  </button>
   <div class="spacer"></div>
+</div>
+
+<div id="profile-hint" hidden></div>
 </div>
 
 <!-- TIMER -->
@@ -433,7 +449,7 @@ button { cursor: pointer; border: none; background: none; }
    ============================================================ */
 // Bumped by tools/bump.js, which the pre-commit hook runs whenever the app
 // files change. Shown in the menu so you can tell what your phone actually has.
-const APP_VERSION = "1.1.4";
+const APP_VERSION = "1.1.5";
 
 const STORE_KEY = "time-manager-v1";
 const MIN = 60000, HOUR = 3600000, DAY = 86400000;
@@ -850,10 +866,31 @@ function render() {
   // With more than one profile, always say which one you are looking at —
   // otherwise an empty screen is indistinguishable from the wrong profile.
   const tp = $("topbar-profile");
+  const multi = ap && state.profiles.length > 1;
   if (tp) {
-    const show = ap && state.profiles.length > 1;
-    tp.textContent = show ? ap.name : "";
-    tp.classList.toggle("show", !!show);
+    tp.textContent = multi ? ap.name : "";
+    tp.classList.toggle("show", !!multi);
+  }
+  $("titles").disabled = !multi;
+
+  // An all-but-empty profile beside a full one is the easiest way to think your
+  // data has vanished, so offer the switch instead of leaving you to find it.
+  const hint = $("profile-hint");
+  if (hint) {
+    const fullest = state.profiles
+      .filter(p => p.id !== state.activeProfileId)
+      .sort((a, b) => b.sessions.length - a.sessions.length)[0];
+    const mine = ap ? ap.sessions.length : 0;
+    const offer = fullest && fullest.sessions.length >= 5 && mine < 3;
+    hint.textContent = "";
+    hint.hidden = !offer;
+    if (offer) {
+      hint.appendChild(el("div", null,
+        `This profile has ${mine === 0 ? "no entries" : mine === 1 ? "1 entry" : mine + " entries"}. “${fullest.name}” has ${fullest.sessions.length}.`));
+      const go = el("button", null, "Switch");
+      go.addEventListener("click", () => { switchProfile(fullest.id); toast(`Switched to “${fullest.name}”`); });
+      hint.appendChild(go);
+    }
   }
   if (view === "timer") renderTimer(now); else renderPeriod(now);
 }
@@ -1260,7 +1297,7 @@ function downloadBlob(text, name) {
  * needed. A file without one is the old single-dataset format, and merges into
  * the active profile exactly as it always did.
  */
-function importData(text) {
+function importData(text, fileName) {
   let parsed;
   try { parsed = JSON.parse(text); }
   catch (e) { toast("That file is not valid JSON"); return; }
@@ -1288,9 +1325,21 @@ function importData(text) {
   const moved = res.profile.id && res.profile.id !== state.activeProfileId;
   if (moved) switchProfile(res.profile.id); else render();
 
-  if (!res.added) { toast(named ? `“${res.profile.name}” is already up to date` : "Nothing new to merge"); return; }
-  toast(`Merged ${res.added} entr${res.added === 1 ? "y" : "ies"} into “${res.profile.name}”`
-        + (moved ? " — switched to it" : ""));
+  // A dialog, not a toast: picking the wrong file out of a Downloads folder is
+  // the likeliest thing to go wrong here, and it must not be missable.
+  const inFile = Array.isArray(parsed.sessions) ? parsed.sessions.length : 0;
+  const lines = [
+    fileName ? `File: ${fileName}` : null,
+    `Profile in file: ${named ? "“" + String(parsed.name).trim() + "”" : "none — treated as the active profile"}`,
+    `Entries in file: ${inFile}`,
+    `Added: ${res.added} new`,
+    inFile - res.added > 0 ? `Skipped: ${inFile - res.added} already present` : null,
+    `Now showing: “${res.profile.name}” (${res.profile.sessions.length} entries)`
+  ].filter(Boolean).join("\n");
+
+  showAlert(res.added ? "Import complete" : "Nothing new to add", lines, [
+    { label: "OK", cls: "btn primary", fn: closeAlert }
+  ]);
 }
 
 /** Merge sessions into the named profile (creating it), or the active one when unnamed. */
@@ -1438,7 +1487,7 @@ function openDataSheet() {
       const f = file.files && file.files[0];
       if (!f) return;
       const r = new FileReader();
-      r.onload = () => importData(String(r.result));
+      r.onload = () => importData(String(r.result), f.name);
       r.onerror = () => toast("Could not read that file");
       r.readAsText(f);
       file.value = "";
@@ -1518,6 +1567,7 @@ function go(target) {
 }
 
 $("btn-menu").addEventListener("click", openDrawer);
+$("titles").addEventListener("click", () => { if (state.profiles.length > 1) openProfilesSheet(); });
 $("drawer-scrim").addEventListener("click", closeDrawer);
 $("sheet-scrim").addEventListener("click", closeSheet);
 $("sheet-close").addEventListener("click", closeSheet);
