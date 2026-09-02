@@ -409,7 +409,7 @@ button { cursor: pointer; border: none; background: none; }
    ============================================================ */
 // Bumped by tools/bump.js, which the pre-commit hook runs whenever the app
 // files change. Shown in the menu so you can tell what your phone actually has.
-const APP_VERSION = "1.1.1";
+const APP_VERSION = "1.1.2";
 
 const STORE_KEY = "time-manager-v1";
 const MIN = 60000, HOUR = 3600000, DAY = 86400000;
@@ -1520,8 +1520,29 @@ if (storageBroken) {
 }
 setInterval(tick, 1000);
 
+/* Keeping the installed app up to date.
+ *
+ * A home-screen app resumes rather than reloads, so without this it can sit on
+ * an old build indefinitely. We re-check for a new service worker every time
+ * the app comes back to the foreground, and reload once the new one takes over.
+ * Reloading is safe mid-session: the running timer lives in storage, not memory. */
 if ("serviceWorker" in navigator) {
-  addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloading = false;
+
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!hadController || reloading) return;   // first install: nothing to reload for
+    reloading = true;
+    location.reload();
+  });
+
+  addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").then((reg) => {
+      const check = () => { if (!document.hidden) reg.update().catch(() => {}); };
+      document.addEventListener("visibilitychange", check);
+      setInterval(check, 60 * 60 * 1000);
+    }).catch(() => {});
+  });
 }
 </script>
 </body>
