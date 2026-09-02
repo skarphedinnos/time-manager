@@ -5,7 +5,7 @@
  * Nothing here touches your hours — those live in localStorage, not the cache.
  */
 // Keyed to APP_VERSION in index.html — bumping the version drops the old cache.
-const CACHE = "time-manager-1.1.2";
+const CACHE = "time-manager-1.1.3";
 const ASSETS = [
   "./",
   "./index.html",
