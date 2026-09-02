@@ -63,6 +63,9 @@
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+/* Several elements below set display:flex, which would otherwise win over the
+   hidden attribute and leave them on screen when the code has hidden them. */
+[hidden] { display: none !important; }
 html, body { height: 100%; }
 body {
   margin: 0;
@@ -214,6 +217,7 @@ button { cursor: pointer; border: none; background: none; }
 .navitem.active svg { color: var(--accent); }
 .navitem:active { background: var(--surface-2); }
 .drawer-foot { margin-top: auto; padding: 14px 20px 0; color: var(--text-dim); font-size: 12px; border-top: 1px solid var(--line); }
+.drawer-foot #version { display: block; margin-top: 8px; opacity: .75; font-variant-numeric: tabular-nums; }
 
 /* ---------- sheet / modal ---------- */
 #sheet-scrim { z-index: 60; }
@@ -370,7 +374,9 @@ button { cursor: pointer; border: none; background: none; }
   <button class="navitem" data-nav="settings">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7.5 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0-1.1-2.7H1.6a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 7.5a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3h.1A1.6 1.6 0 0 0 10 1.6V1.6a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5h.1a1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8v.1a1.6 1.6 0 0 0 1.5 1H23a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg> Settings
   </button>
-  <div class="drawer-foot">Data is stored on this device only.<br>Export regularly.</div>
+  <div class="drawer-foot">Data is stored on this device only.<br>Export regularly.
+    <span id="version"></span>
+  </div>
 </nav>
 
 <!-- SHEET -->
@@ -401,6 +407,10 @@ button { cursor: pointer; border: none; background: none; }
 /* ============================================================
    Constants & tiny helpers
    ============================================================ */
+// Bumped by tools/bump.js, which the pre-commit hook runs whenever the app
+// files change. Shown in the menu so you can tell what your phone actually has.
+const APP_VERSION = "1.1.1";
+
 const STORE_KEY = "time-manager-v1";
 const MIN = 60000, HOUR = 3600000, DAY = 86400000;
 const DAY_NAMES = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
@@ -1147,6 +1157,10 @@ function openSettingsSheet() {
     body.appendChild(b);
 
     body.appendChild(el("div", "hint", "The week runs Monday to Sunday. Times follow this device's timezone."));
+
+    const ver = el("div", "hint", `Version ${APP_VERSION}`);
+    ver.style.marginTop = "18px";
+    body.appendChild(ver);
   });
 }
 
@@ -1211,9 +1225,15 @@ function importData(text) {
   const named = typeof parsed.name === "string" && parsed.name.trim();
   const res = mergeIntoProfile(named ? parsed.name : null, parsed.sessions);
 
-  save(); closeSheet(); render();
+  save(); closeSheet();
+  // Land in the profile that was just imported — otherwise the entries appear
+  // to have gone nowhere, because you are still looking at the old profile.
+  const moved = res.profile.id && res.profile.id !== state.activeProfileId;
+  if (moved) switchProfile(res.profile.id); else render();
+
   if (!res.added) { toast(named ? `“${res.profile.name}” is already up to date` : "Nothing new to merge"); return; }
-  toast(`Merged ${res.added} entr${res.added === 1 ? "y" : "ies"} into “${res.profile.name}”`);
+  toast(`Merged ${res.added} entr${res.added === 1 ? "y" : "ies"} into “${res.profile.name}”`
+        + (moved ? " — switched to it" : ""));
 }
 
 /** Merge sessions into the named profile (creating it), or the active one when unnamed. */
@@ -1485,6 +1505,7 @@ function tick(force) {
    Boot
    ============================================================ */
 load();
+{ const v = $("version"); if (v) v.textContent = "Version " + APP_VERSION; }
 applyTheme();
 // Normalise the running-session flag before the first sweep so a cutoff that
 // passed while the app was closed is applied retroactively, not prompted about.

@@ -4,7 +4,8 @@
  * open the app online; cache-first for the static bits that never change.
  * Nothing here touches your hours — those live in localStorage, not the cache.
  */
-const CACHE = "time-manager-v1";
+// Keyed to APP_VERSION in index.html — bumping the version drops the old cache.
+const CACHE = "time-manager-1.1.1";
 const ASSETS = [
   "./",
   "./index.html",
